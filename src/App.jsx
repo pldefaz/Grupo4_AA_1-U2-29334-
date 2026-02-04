@@ -1,35 +1,65 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import "./App.css";
+import { fetchWeatherByCity } from "./services/weatherService";
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [city, setCity] = useState("Quito");
+  const [selectedCity, setSelectedCity] = useState("Quito");
+
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError("");
+      setData(null);
+
+      try {
+        const result = await fetchWeatherByCity(selectedCity);
+        if (!cancelled) setData(result);
+      } catch (e) {
+        if (!cancelled) setError(e.message || "Error desconocido");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    if (selectedCity) load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCity]);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div className="app">
+      <h1>Mundial 2026 - Clima</h1>
 
-export default App
+      <div className="controls">
+        <input
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          placeholder="Ej: Vancouver"
+        />
+        <button onClick={() => setSelectedCity(city)} disabled={loading}>
+          {loading ? "Cargando..." : "Consultar"}
+        </button>
+      </div>
+
+      {error && <p className="error">❌ {error}</p>}
+
+      {data && !error && (
+        <div className="card">
+          <h2>{data.name}</h2>
+          <p>🌡️ {Math.round(data.main.temp)} °C</p>
+          <p>☁️ {data.weather?.[0]?.description}</p>
+          <p>💧 Humedad: {data.main.humidity}%</p>
+        </div>
+      )}
+    </div>
+  );
+}
