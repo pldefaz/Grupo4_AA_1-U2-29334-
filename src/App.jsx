@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import CityList from "./components/CityList";
+import WeatherCard from "./components/WeatherCard";
 import { fetchWeatherByCity } from "./services/weatherService";
 
 export default function App() {
-  const [city, setCity] = useState("Quito");
-  const [selectedCity, setSelectedCity] = useState("Quito");
+  const cities = ["Ciudad de México", "Nueva York", "Vancouver"];
 
+  const [selectedCity, setSelectedCity] = useState(cities[0]);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -19,6 +21,8 @@ export default function App() {
       setData(null);
 
       try {
+        // Nota: OpenWeather a veces entiende mejor "Mexico City" / "New York" / "Vancouver"
+        // pero primero probamos tal cual. Si falla, te dejo fallback en el punto 7.
         const result = await fetchWeatherByCity(selectedCity);
         if (!cancelled) setData(result);
       } catch (e) {
@@ -29,37 +33,26 @@ export default function App() {
     }
 
     if (selectedCity) load();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => (cancelled = true);
   }, [selectedCity]);
 
   return (
     <div className="app">
-      <h1>Mundial 2026 - Clima</h1>
+      <header className="header">
+        <h1>Mundial 2026 - Clima</h1>
+        <p>Selecciona una sede para consultar el clima en tiempo real.</p>
+      </header>
 
-      <div className="controls">
-        <input
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          placeholder="Ej: Vancouver"
-        />
-        <button onClick={() => setSelectedCity(city)} disabled={loading}>
-          {loading ? "Cargando..." : "Consultar"}
-        </button>
-      </div>
+      <CityList
+        cities={cities}
+        selectedCity={selectedCity}
+        onSelect={setSelectedCity}
+        disabled={loading}
+      />
 
+      {loading && <p className="info">⏳ Cargando...</p>}
       {error && <p className="error">❌ {error}</p>}
-
-      {data && !error && (
-        <div className="card">
-          <h2>{data.name}</h2>
-          <p>🌡️ {Math.round(data.main.temp)} °C</p>
-          <p>☁️ {data.weather?.[0]?.description}</p>
-          <p>💧 Humedad: {data.main.humidity}%</p>
-        </div>
-      )}
+      {data && !error && <WeatherCard data={data} />}
     </div>
   );
 }
